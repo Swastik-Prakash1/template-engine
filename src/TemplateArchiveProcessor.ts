@@ -23,6 +23,7 @@ import Script from '@accordproject/cicero-core/types/src/script';
 import { TwoSlashReturn } from '@typescript/twoslash';
 import { JavaScriptEvaluator } from './JavaScriptEvaluator';
 import { SMART_LEGAL_CONTRACT_BASE64 } from './runtime/declarations';
+import { LLMEvaluator, LLMConfig } from './LLMEvaluator';
 
 export type State = object;
 export type Response = object;
@@ -129,8 +130,25 @@ export class TemplateArchiveProcessor {
             }
         }
         else {
-            throw new Error('Only TypeScript is supported at this time');
+            // no TypeScript logic file — use LLM-based execution
+            const llmConfig: LLMConfig | undefined = (this.template.getMetadata() as any).llmConfig;
+            if (!llmConfig) {
+                throw new Error('No logic file and no LLM config provided. Cannot execute trigger.');
+            }
+            const evaluator = new LLMEvaluator(llmConfig);
+            const contractText = this.template.getTemplate();
+            return evaluator.trigger(contractText, {
+                contractText,
+                contractData: data,
+                request,
+                state,
+                currentTime
+            });
         }
+    }
+
+    /**
+     * Init the logic of a template
     }
 
     /**
@@ -178,7 +196,20 @@ export class TemplateArchiveProcessor {
             }
         }
         else {
-            throw new Error('Only TypeScript is supported at this time');
+            // no TypeScript logic file — use LLM-based execution
+            const llmConfig: LLMConfig | undefined = (this.template.getMetadata() as any).llmConfig;
+            if (!llmConfig) {
+                throw new Error('No logic file and no LLM config provided. Cannot execute init.');
+            }
+            const evaluator = new LLMEvaluator(llmConfig);
+            const contractText = this.template.getTemplate();
+            return evaluator.init(contractText, {
+                contractText,
+                contractData: data,
+                currentTime
+            });
         }
     }
 }
+
+
